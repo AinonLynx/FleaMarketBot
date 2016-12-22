@@ -66,7 +66,24 @@ def main():
     #Del item
 
     #Edit item
-    dp.add_handler(CommandHandler("edit", edit.list_available))
+    dp.add_handler(CommandHandler("edit", edit.list_available)) #TODO: move to conversation
+
+    edit_handler = ConversationHandler(
+        entry_points=[RegexHandler(u'^/edit\d+', edit.edit)],
+
+        states={
+            edit.NAME: [MessageHandler(Filters.text, edit.name),
+                        RegexHandler(u'^пропустить$', edit.skip_name)],
+            edit.DESCRIPTION: [MessageHandler(Filters.text, edit.description),
+                        RegexHandler(u'^пропустить$', edit.skip_description)],
+            edit.PHOTO: [MessageHandler(Filters.photo, edit.photo),
+                        RegexHandler(u'^пропустить$', edit.skip_photo)],
+            edit.PUBLISH: [CommandHandler(u'добавить', edit.publish, pass_user_data=True), ],
+        },
+
+        fallbacks=[CommandHandler(u'отмена', edit.cancel, pass_user_data=True)]
+    )
+    dp.add_handler(edit_handler)
 
     # log all errors
     dp.add_error_handler(error)
