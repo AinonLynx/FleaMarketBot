@@ -32,7 +32,7 @@ class database(object):
             )
             subscriptions_table = Table(
                 'subscriptions', metadata,
-                Column('chatID', Integer, primary_key=True),
+                Column('chatID', String, primary_key=True),
             )
             metadata.create_all(engine)
             mapper(Item, items_table)
