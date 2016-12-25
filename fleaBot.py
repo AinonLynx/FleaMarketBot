@@ -27,7 +27,7 @@ def main():
 
     # Просмотр
     dp.add_handler(CommandHandler("list", list.all))
-    dp.add_handler(CommandHandler("view", view.all_items))
+    #dp.add_handler(CommandHandler("view", view.all_items)) # so many messages
     dp.add_handler(RegexHandler('^\/view(\d{1,})$', view.item, pass_groups=True))
 
     # Подписка
