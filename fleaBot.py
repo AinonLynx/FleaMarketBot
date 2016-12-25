@@ -51,6 +51,26 @@ def main():
     # Редактирование
     dp.add_handler(CommandHandler("edit", edit.list_items))
 
+    edit_handler = ConversationHandler(
+        entry_points=[RegexHandler('^/edit(\d+)$', edit.edit, pass_groups=True, pass_user_data=True)],
+
+        states={
+            edit.NAME: [MessageHandler(Filters.text, edit.name, pass_user_data=True),
+                        CommandHandler('skip', edit.skip_name, pass_user_data=True)],
+
+            edit.DESCRIPTION: [MessageHandler(Filters.text, edit.description, pass_user_data=True),
+                        CommandHandler('skip', edit.skip_description, pass_user_data=True)],
+
+            edit.PHOTO: [MessageHandler(Filters.photo, edit.photo, pass_user_data=True),
+                        CommandHandler('skip', edit.skip_photo, pass_user_data=True)],
+
+            edit.PUBLISH: [CommandHandler('publish', edit.publish, pass_user_data=True), ],
+        },
+
+        fallbacks=[CommandHandler('cancel', edit.cancel, pass_user_data=True)]
+    )
+    dp.add_handler(edit_handler)
+
     # Удаление
     dp.add_handler(CommandHandler("delete", delete.list_items))
     dp.add_handler(RegexHandler(u'^\/delete(\d{1,})$', delete.delete_item, pass_groups=True))
@@ -58,26 +78,6 @@ def main():
     # Другое
     dp.add_handler(RegexHandler(u'.*(С|с)тил{1,2}и.*', jokes.stilli))
     dp.add_handler(CommandHandler("support", support.support))
-
-    edit_handler = ConversationHandler(
-        entry_points=[RegexHandler('^/change(\d+)$', edit.edit, pass_groups=True, pass_user_data=True)],
-
-        states={
-            edit.NAME: [MessageHandler(Filters.text, edit.name, pass_user_data=True),
-                        CommandHandler('skip', edit.skip_name)],
-
-            edit.DESCRIPTION: [MessageHandler(Filters.text, edit.description, pass_user_data=True),
-                        CommandHandler('skip', edit.skip_description)],
-
-            edit.PHOTO: [MessageHandler(Filters.photo, edit.photo, pass_user_data=True),
-                        CommandHandler('skip', edit.skip_photo)],
-
-            edit.PUBLISH: [CommandHandler(u'add', edit.publish, pass_user_data=True), ],
-        },
-
-        fallbacks=[CommandHandler('cancel', edit.cancel, pass_user_data=True)]
-    )
-    dp.add_handler(edit_handler)
 
     # log all errors
     dp.add_error_handler(error)
