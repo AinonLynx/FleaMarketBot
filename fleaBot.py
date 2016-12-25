@@ -66,22 +66,25 @@ def main():
     #Del item
 
     #Edit item
-    dp.add_handler(CommandHandler("edit", edit.list_available)) #TODO: move to conversation
+    dp.add_handler(CommandHandler("edit", edit.list_available))
 
     edit_handler = ConversationHandler(
-        entry_points=[RegexHandler(u'^/edit\d+', edit.edit)],
+        entry_points=[RegexHandler('^/change(\d+)$', edit.edit, pass_groups=True, pass_user_data=True)],
 
         states={
-            edit.NAME: [MessageHandler(Filters.text, edit.name),
-                        RegexHandler(u'^пропустить$', edit.skip_name)],
-            edit.DESCRIPTION: [MessageHandler(Filters.text, edit.description),
-                        RegexHandler(u'^пропустить$', edit.skip_description)],
-            edit.PHOTO: [MessageHandler(Filters.photo, edit.photo),
-                        RegexHandler(u'^пропустить$', edit.skip_photo)],
-            edit.PUBLISH: [CommandHandler(u'добавить', edit.publish, pass_user_data=True), ],
+            edit.NAME: [MessageHandler(Filters.text, edit.name, pass_user_data=True),
+                        CommandHandler('skip', edit.skip_name)],
+
+            edit.DESCRIPTION: [MessageHandler(Filters.text, edit.description, pass_user_data=True),
+                        CommandHandler('skip', edit.skip_description)],
+
+            edit.PHOTO: [MessageHandler(Filters.photo, edit.photo, pass_user_data=True),
+                        CommandHandler('skip', edit.skip_photo)],
+
+            edit.PUBLISH: [CommandHandler(u'add', edit.publish, pass_user_data=True), ],
         },
 
-        fallbacks=[CommandHandler(u'отмена', edit.cancel, pass_user_data=True)]
+        fallbacks=[CommandHandler('cancel', edit.cancel, pass_user_data=True)]
     )
     dp.add_handler(edit_handler)
 
