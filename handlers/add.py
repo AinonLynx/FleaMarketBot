@@ -1,57 +1,46 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+from sqlalchemy import desc
+from telegram import ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram.ext import ConversationHandler
 
-from log import *
 from db import database
-from add import pre_publish
+from log import *
+from models.Item import Items, Item
+from handlers.subscription import Notifier
 
 # add item conversation
 NAME, DESCRIPTION, PHOTO, PUBLISH = range(4)
 
 
-def list_available(bot, update):
-    items = database().get_by_userID(update.message.from_user.id)
-
-    lines = []
-    i = 0
-    for item in items:
-        lines.append('/change%s - %s' % (item.id, item.decorator().shortInfo(30)))
-
-    update.message.reply_text('\n'.join(lines))
-
-
-def edit(bot, update, groups, user_data):
-    reply_keyboard = [['skip', ]]
-
-    id = groups[0]
-    item = database().item.get(id=id, userID=update.message.from_user.id, all=False)
-    if item is None:
-        update.message.reply_text('Товар с идентификатором "%s" не найден' % id)
-        return
-
-    user_data['base'] = database()
-    update.message.reply_text('Текущее имя товара "%s", напишите новое имя или нажмите skip' % item.itemName,
+def pre_publish(bot, update):
+    """check item before publish"""
+    user = update.message.from_user
+    reply_keyboard = [['/publish', '/cancel', ]]
+    update.message.reply_text('Все верно?\n' + str(Items.get_item(user.id)),
                               reply_markup=ReplyKeyboardMarkup(
                                   reply_keyboard,
                                   one_time_keyboard=True,
                                   resize_keyboard=True
                               ))
 
+
+def add(bot, update, user_data):
+    """
+
+    :type update: telegram.Update
+    """
+    user_data['base'] = database()
+    user = update.message.from_user
+    update.message.reply_text(
+        'Чтобы добавить товар на продажу, напишите его название. Если передумали, в любой момент можно написать /cancel',
+        reply_markup=ReplyKeyboardRemove())
+    Items.create_item(user.id, user.username)
+
     return NAME
 
-def name(bot, update, user_data):
-    """add item name"""
-    user = update.message.from_user
-    itemName = update.message.text
-    logger.info("Item name: %s" % (itemName))
-    user_data['base']..add_name(user.id, itemName)
 
-    update.message.reply_text('Отлично! Теперь напишите описание товара. Не забудьте указать количество и цену!',
-                              reply_markup=ReplyKeyboardRemove())
-
-    return DESCRIPTION
-
-def skip_name(bot, update):
+def name(bot, update):
     """add item name"""
     user = update.message.from_user
     itemName = update.message.text
@@ -63,16 +52,17 @@ def skip_name(bot, update):
 
     return DESCRIPTION
 
+
 def description(bot, update):
     """add item description"""
-    reply_keyboard = [['пропустить', ]]
+    reply_keyboard = [['/skip', ]]
 
     user = update.message.from_user
     itemDescription = update.message.text
     logger.info("Item description: %s" % (itemDescription))
     Items.add_description(user.id, itemDescription)
 
-    update.message.reply_text('Последний шаг. Отправте фото товара или нажмите "пропустить"',
+    update.message.reply_text('Последний шаг. Отправте фото товара, или нажмите "skip", чтобы пропустить фото.',
                               reply_markup=ReplyKeyboardMarkup(
                                   reply_keyboard,
                                   one_time_keyboard=True,
@@ -81,23 +71,6 @@ def description(bot, update):
 
     return PHOTO
 
-def skip_description(bot, update):
-    """add item description"""
-    reply_keyboard = [['пропустить', ]]
-
-    user = update.message.from_user
-    itemDescription = update.message.text
-    logger.info("Item description: %s" % (itemDescription))
-    Items.add_description(user.id, itemDescription)
-
-    update.message.reply_text('Последний шаг. Отправте фото товара или нажмите "пропустить"',
-                              reply_markup=ReplyKeyboardMarkup(
-                                  reply_keyboard,
-                                  one_time_keyboard=True,
-                                  resize_keyboard=True
-                              ))
-
-    return PHOTO
 
 def photo(bot, update):
     """add item photo"""
@@ -135,8 +108,12 @@ def cancel(bot, update, user_data):
 def publish(bot, update, user_data):
     """publish item"""
     user = update.message.from_user
-    user_data['base'].save_to_db(Items.del_item(user.id))
+    item = Items.del_item(user.id)
+    user_data['base'].item.save(item)
     del user_data['base']
     update.message.reply_text('Товар добавлен!', reply_markup=ReplyKeyboardRemove())
+
+    newItem = database().item.get(userID=update.message.from_user.id, orderBy=desc(Item.id), limit=1, all=False)
+    Notifier(bot, newItem).run()
 
     return ConversationHandler.END
